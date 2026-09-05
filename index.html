@@ -1347,29 +1347,18 @@
     }
 
     // ---- Riders ----
-    let ORIGINAL_RIDER_ASSETS = null; // set when editing an existing rider; null for a brand-new one
-
-    function applyRiderAssetMins(assets) {
-      document.querySelectorAll('.rd-asset-input').forEach(inp => {
-        const min = assets ? (Number(assets[inp.dataset.cat]) || 0) : 0;
-        inp.min = min;
-      });
-    }
-
     function lookupRider() {
       const id = document.getElementById('rd-id').value.trim();
-      if (!id) { ORIGINAL_RIDER_ASSETS = null; applyRiderAssetMins(null); return; }
+      if (!id) return;
       callApi('getRiderById', [id])
         .then(rider => {
-          if (!rider) { ORIGINAL_RIDER_ASSETS = null; applyRiderAssetMins(null); return; }
+          if (!rider) return;
           document.getElementById('rd-name').value = rider.RiderName || '';
           document.getElementById('rd-store').value = rider.Store || '';
           document.getElementById('rd-vendor').value = rider.Vendor || '';
           document.querySelectorAll('.rd-asset-input').forEach(inp => {
             inp.value = rider[inp.dataset.cat] || 0;
           });
-          ORIGINAL_RIDER_ASSETS = rider;
-          applyRiderAssetMins(rider);
         })
         .catch(err => showGlobalError('rider lookup (getRiderById)', err));
     }
@@ -1384,11 +1373,9 @@
       document.querySelectorAll('.rd-asset-input').forEach(inp => {
         inp.value = rider[inp.dataset.cat] || 0;
       });
-      ORIGINAL_RIDER_ASSETS = rider;
-      applyRiderAssetMins(rider);
       document.getElementById('rd-id').scrollIntoView({ behavior: 'smooth', block: 'start' });
       const status = document.getElementById('rd-status');
-      status.textContent = 'Editing ' + rider.RiderID + ' — you can only increase quantities here, not decrease them. Click Save Rider Assets when done.';
+      status.textContent = 'Editing ' + rider.RiderID + ' — update quantities as needed, then click Save Rider Assets.';
       status.className = 'status';
     }
 
@@ -1406,26 +1393,11 @@
       const assets = {};
       document.querySelectorAll('.rd-asset-input').forEach(inp => { assets[inp.dataset.cat] = inp.value; });
 
-      // Client-side heads-up before even hitting the server — the server
-      // enforces this too, so this is just a faster/friendlier check.
-      if (ORIGINAL_RIDER_ASSETS && String(ORIGINAL_RIDER_ASSETS.RiderID) === id) {
-        for (const cat of CONFIG.riderCategories) {
-          const oldVal = Number(ORIGINAL_RIDER_ASSETS[cat]) || 0;
-          const newVal = Number(assets[cat]) || 0;
-          if (newVal < oldVal) {
-            status.textContent = `Cannot decrease ${cat} from ${oldVal} to ${newVal} here — assets can only be increased on this form.`;
-            status.className = 'status err';
-            return;
-          }
-        }
-      }
-
       status.textContent = 'Saving...'; status.className = 'status';
       callApi('saveRiderAssets', [id, name, store, vendor, assets])
         .then(() => {
           status.textContent = 'Saved.';
           status.className = 'status ok';
-          ORIGINAL_RIDER_ASSETS = null;
           loadRiders();
         })
         .catch(err => { status.textContent = err.message; status.className = 'status err'; });
