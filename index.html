@@ -127,6 +127,7 @@
     .loading-caption { font-size: 11px; color: var(--muted); margin-top: 4px; }
     .shortfall { color: var(--danger); font-weight: 700; }
     .plan-remove { color: var(--danger); cursor: pointer; font-weight: 700; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; margin: 0; }
 
     /* Bar charts */
     .bar-row { display: flex; align-items: center; gap: 10px; margin: 7px 0; }
@@ -1727,9 +1728,25 @@
           const val = isReturnedTruthy(r[c + 'Returned']);
           return `<td><span class="yn-badge ${val ? 'yes' : 'no'}">${val ? 'Yes' : 'No'}</span></td>`;
         }).join('');
+        const safeId = String(r.RiderID).replace(/'/g,"\\'");
         return `<tr><td>${r.RiderID}</td><td>${r.RiderName}</td><td>${r.Store || ''}</td><td>${r.Vendor || ''}</td>${cats}<td>${fmtDate(r.DateRecorded)}</td>
-          <td><button class="secondary" style="margin:0;" onclick="editReturnRecord('${String(r.RiderID).replace(/'/g,"\\'")}')">Update Status</button></td></tr>`;
+          <td style="white-space:nowrap;">
+            <button class="secondary btn-sm" onclick="editReturnRecord('${safeId}')">Update Status</button>
+            <button class="danger btn-sm" onclick="deleteReturnRecord('${safeId}')">Delete</button>
+          </td></tr>`;
       }).join('');
+    }
+
+    function deleteReturnRecord(riderId) {
+      if (!confirm('Delete the return record for ' + riderId + '? This cannot be undone.')) return;
+      const status = document.getElementById('ret-status');
+      callApi('deleteRiderReturn', [riderId])
+        .then(() => {
+          status.textContent = 'Deleted ' + riderId + '.';
+          status.className = 'status ok';
+          loadReturns();
+        })
+        .catch(err => { status.textContent = err.message; status.className = 'status err'; });
     }
 
     function downloadReturnsTemplate() {
