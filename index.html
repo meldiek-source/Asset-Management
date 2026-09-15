@@ -674,13 +674,15 @@
     // Some requests occasionally come back with a transient "Missing
     // action" error — that looks like a rare, fast-failing hiccup on
     // Apps Script's side, so it's retried a couple of times. A slow or
-    // unstable connection is a different problem: retrying a request
-    // that's failing because the response is taking too long to arrive
-    // just compounds the wait, so that case gets a hard timeout and at
-    // most ONE retry instead. Genuine business errors (validation, not
+    // unstable connection is different: a request that times out gets
+    // ONE automatic retry with a more generous timeout — this is exactly
+    // what manually refreshing the page already fixes, just done
+    // automatically instead of requiring a person to notice the error
+    // and retry it themselves. Genuine business errors (validation, not
     // found, unauthorized, etc.) are never retried — they throw straight
     // away on the first attempt.
-    const API_TIMEOUT_MS = 20000;
+    const API_TIMEOUT_MS = 20000;       // first attempt
+    const API_TIMEOUT_RETRY_MS = 35000; // the one automatic retry, if the first attempt times out
 
     function callApi(action, params, attempt) {
       attempt = attempt || 1;
@@ -693,8 +695,9 @@
         }
       }
 
+      const thisTimeoutMs = attempt === 1 ? API_TIMEOUT_MS : API_TIMEOUT_RETRY_MS;
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+      const timeoutId = setTimeout(() => controller.abort(), thisTimeoutMs);
 
       return fetch(API_URL, {
         method: 'POST',
@@ -730,7 +733,11 @@
         .catch(err => {
           clearTimeout(timeoutId);
           if (err.name === 'AbortError') {
-            throw new Error('Request timed out after ' + (API_TIMEOUT_MS / 1000) + 's — your connection to Google may be slow right now. Please try again.');
+            if (attempt < 2) {
+              return new Promise(resolve => setTimeout(resolve, 300))
+                .then(() => callApi(action, params, attempt + 1));
+            }
+            throw new Error('Request timed out twice (20s, then 35s) — your connection to Google may be slow right now. Please try again in a moment.');
           }
           // A response that arrived corrupted/incomplete (fails to parse
           // as JSON) is worth ONE quick retry, not the compounding 3x a
