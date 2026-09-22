@@ -161,8 +161,9 @@
     }
     .yn-badge.yes { background: rgba(126,231,135,0.15); color: var(--good); border: 1px solid rgba(126,231,135,0.4); }
     .yn-badge.no { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid rgba(255,107,107,0.4); }
+    .yn-badge.pending { background: rgba(167,169,171,0.15); color: var(--muted); border: 1px solid rgba(167,169,171,0.4); }
 
-    /* Toggle pills for returns Yes/No */
+    /* Toggle pills for returns Yes/No/Pending */
     .toggle-pair { display: flex; gap: 6px; margin-top: 6px; }
     .toggle-btn {
       flex: 1; text-align: center; padding: 9px; border-radius: 6px; border: 1px solid var(--border);
@@ -170,6 +171,7 @@
     }
     .toggle-btn.on-yes.selected { background: var(--good); color: #0e0f0c; border-color: var(--good); }
     .toggle-btn.on-no.selected { background: var(--danger); color: #0e0f0c; border-color: var(--danger); }
+    .toggle-btn.on-pending.selected { background: var(--muted); color: #0e0f0c; border-color: var(--muted); }
 
     /* Requests tab — distinct color to separate it visually from the rest of the app */
     :root { --req-accent: #FF9F1C; }
@@ -531,7 +533,7 @@
 
     <div class="card">
       <strong>Bulk upload terminated rider returns</strong>
-      <div class="muted">Download the template, fill it in, then upload it back. Column order: Rider ID, Rider Name, Store, Vendor, Helmet Returned (Yes/No), Box Returned (Yes/No). Existing Rider IDs are updated; new ones are created. Each upload is dated today.</div>
+      <div class="muted">Download the template, fill it in, then upload it back. Column order: Rider ID, Rider Name, Store, Vendor, Helmet Returned (Yes/No), Box Returned (Yes/No). Leave a cell blank to mark it Pending instead. Existing Rider IDs are updated; new ones are created. Each upload is dated today.</div>
       <div class="row" style="margin-top:10px; align-items:flex-end;">
         <div style="flex:0;"><button class="secondary" onclick="downloadReturnsTemplate()">Download Excel template</button></div>
         <div>
@@ -555,6 +557,13 @@
           <label>Filter by vendor</label>
           <select id="ret-vendor-filter" onchange="renderReturnsTable()">
             <option value="All">All</option>
+          </select>
+        </div>
+        <div style="flex:1; min-width:140px;">
+          <label>Filter by status</label>
+          <select id="ret-status-filter" onchange="renderReturnsTable()">
+            <option value="All">All</option>
+            <option value="Pending">Pending only</option>
           </select>
         </div>
         <div style="flex:1; min-width:200px;">
@@ -640,7 +649,7 @@
     let CONFIG = null;
     let dispatchPlanRows = []; // {store, category, qty}
     let lastConfirmedPlan = null; // holds plan rows pending confirmation
-    let returnToggles = {}; // { Helmet: true/false, 'Delivery box': true/false }
+    let returnToggles = {}; // { Helmet: 'yes'/'no'/'pending', 'Delivery box': 'yes'/'no'/'pending' }
     let SESSION_TOKEN = null;
 
     // ---- Browser-side cache (mirrors the server's short-lived cache) ----
@@ -1035,16 +1044,17 @@
             </div>
           `).join('');
 
-          // Return toggle grid (Yes/No per return category)
+          // Return toggle grid (Yes/No/Pending per return category)
           returnToggles = {};
-          cfg.returnCategories.forEach(cat => returnToggles[cat] = false);
+          cfg.returnCategories.forEach(cat => returnToggles[cat] = 'pending');
           const retGrid = document.getElementById('ret-toggle-grid');
           retGrid.innerHTML = cfg.returnCategories.map(cat => `
             <div>
               <label>${cat === 'Delivery box' ? 'Box' : cat} returned?</label>
-              <div class="toggle-pair" data-cat="${cat}">
-                <div class="toggle-btn on-yes" onclick="setReturnToggle('${cat}', true)">Yes</div>
-                <div class="toggle-btn on-no selected" onclick="setReturnToggle('${cat}', false)">No</div>
+              <div class="toggle-pair toggle-trio" data-cat="${cat}">
+                <div class="toggle-btn on-yes" onclick="setReturnToggle('${cat}', 'yes')">Yes</div>
+                <div class="toggle-btn on-no" onclick="setReturnToggle('${cat}', 'no')">No</div>
+                <div class="toggle-btn on-pending selected" onclick="setReturnToggle('${cat}', 'pending')">Pending</div>
               </div>
             </div>
           `).join('');
@@ -1640,8 +1650,9 @@
     function setReturnToggle(cat, value) {
       returnToggles[cat] = value;
       const pair = document.querySelector(`.toggle-pair[data-cat="${cat}"]`);
-      pair.querySelector('.on-yes').classList.toggle('selected', value === true);
-      pair.querySelector('.on-no').classList.toggle('selected', value === false);
+      pair.querySelector('.on-yes').classList.toggle('selected', value === 'yes');
+      pair.querySelector('.on-no').classList.toggle('selected', value === 'no');
+      pair.querySelector('.on-pending').classList.toggle('selected', value === 'pending');
     }
 
     function lookupReturn() {
@@ -1654,8 +1665,7 @@
           document.getElementById('ret-store').value = rec.Store || '';
           document.getElementById('ret-vendor').value = rec.Vendor || '';
           CONFIG.returnCategories.forEach(cat => {
-            const val = isReturnedTruthy(rec[cat + 'Returned']);
-            setReturnToggle(cat, val);
+            setReturnToggle(cat, getReturnStatus(rec[cat + 'Returned']));
           });
         })
         .catch(err => showGlobalError('return lookup (getRiderReturnById)', err));
@@ -1713,11 +1723,16 @@
     function renderReturnsTable() {
       const storeFilter = document.getElementById('ret-store-filter').value;
       const vendorFilter = document.getElementById('ret-vendor-filter').value;
+      const statusFilter = document.getElementById('ret-status-filter').value;
       const searchText = document.getElementById('ret-search').value.trim().toLowerCase();
 
       let rows = RETURN_ROWS;
       if (storeFilter !== 'All') rows = rows.filter(r => storeMatches(r.Store, storeFilter));
       if (vendorFilter !== 'All') rows = rows.filter(r => (r.Vendor || 'Unspecified/Blank') === vendorFilter);
+      if (statusFilter === 'Pending') {
+        // "Pending" = at least one of this rider's categories is still unconfirmed.
+        rows = rows.filter(r => CONFIG.returnCategories.some(c => getReturnStatus(r[c + 'Returned']) === 'pending'));
+      }
       if (searchText) {
         rows = rows.filter(r =>
           String(r.RiderID || '').toLowerCase().includes(searchText) ||
@@ -1732,8 +1747,9 @@
       }
       tbody.innerHTML = rows.map(r => {
         const cats = CONFIG.returnCategories.map(c => {
-          const val = isReturnedTruthy(r[c + 'Returned']);
-          return `<td><span class="yn-badge ${val ? 'yes' : 'no'}">${val ? 'Yes' : 'No'}</span></td>`;
+          const status = getReturnStatus(r[c + 'Returned']);
+          const label = status === 'yes' ? 'Yes' : status === 'no' ? 'No' : 'Pending';
+          return `<td><span class="yn-badge ${status}">${label}</span></td>`;
         }).join('');
         const safeId = String(r.RiderID).replace(/'/g,"\\'");
         return `<tr><td>${r.RiderID}</td><td>${r.RiderName}</td><td>${r.Store || ''}</td><td>${r.Vendor || ''}</td>${cats}<td>${fmtDate(r.DateRecorded)}</td>
@@ -1759,7 +1775,7 @@
     function downloadReturnsTemplate() {
       if (!CONFIG) { alert('Please wait for the app to finish loading, then try again.'); return; }
       const headers = ['RiderID', 'RiderName', 'Store', 'Vendor'].concat(CONFIG.returnCategories.map(c => (c === 'Delivery box' ? 'Box' : c) + 'Returned'));
-      const exampleRow = ['DA-2201', 'Karim Fathy', CONFIG.stores[0], CONFIG.vendors[0]].concat(CONFIG.returnCategories.map(() => 'No'));
+      const exampleRow = ['DA-2201', 'Karim Fathy', CONFIG.stores[0], CONFIG.vendors[0]].concat(CONFIG.returnCategories.map(() => ''));
       const ws = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Returns');
@@ -1781,7 +1797,10 @@
           const parsed = rows.map(r => {
             const [riderId, riderName, store, vendor, ...flags] = r;
             const returns = {};
-            CONFIG.returnCategories.forEach((cat, i) => { returns[cat] = /^y(es)?$/i.test(String(flags[i] || '').trim()); });
+            CONFIG.returnCategories.forEach((cat, i) => {
+              const raw = String(flags[i] || '').trim();
+              returns[cat] = !raw ? 'pending' : (/^y(es)?$/i.test(raw) ? 'yes' : 'no');
+            });
             return {
               riderId: String(riderId || '').trim(), riderName: String(riderName || '').trim(),
               store: String(store || '').trim(), vendor: String(vendor || '').trim(), returns
@@ -1813,8 +1832,7 @@
       document.getElementById('ret-store').value = rec.Store || '';
       document.getElementById('ret-vendor').value = rec.Vendor || '';
       CONFIG.returnCategories.forEach(cat => {
-        const val = isReturnedTruthy(rec[cat + 'Returned']);
-        setReturnToggle(cat, val);
+        setReturnToggle(cat, getReturnStatus(rec[cat + 'Returned']));
       });
       document.getElementById('ret-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
       const status = document.getElementById('ret-status');
@@ -1824,14 +1842,17 @@
 
     function renderReturnsDashboardStats(rep) {
       const notReturnedPct = (rep.notReturnedPct !== undefined) ? rep.notReturnedPct : (100 - rep.returnedPct);
+      const pendingCount = rep.pendingCount || 0;
       document.getElementById('ret-stats').innerHTML = `
         <div class="stat-box"><div class="num">${rep.riderCount}</div><div class="lbl">Terminated riders logged</div></div>
         <div class="stat-box green"><div class="num">${rep.returnedPct}%</div><div class="lbl">Assets Returned</div><div class="sub">${rep.returnedCount} units</div></div>
         <div class="stat-box red"><div class="num">${notReturnedPct}%</div><div class="lbl">Assets Not Returned</div><div class="sub">${rep.notReturnedCount} units</div></div>
+        <div class="stat-box"><div class="num">${pendingCount}</div><div class="lbl">Pending update</div><div class="sub">not yet confirmed either way</div></div>
       `;
       renderBars('ret-overall-chart', [
         { label: 'Returned', value: rep.returnedCount, color: '#7ee787' },
-        { label: 'Not Returned', value: rep.notReturnedCount, color: '#ff6b6b' }
+        { label: 'Not Returned', value: rep.notReturnedCount, color: '#ff6b6b' },
+        { label: 'Pending', value: pendingCount, color: '#a7a9ab' }
       ]);
       renderBars('ret-vendor-chart', rep.byVendor.map(v => ({
         label: v.vendor, value: v.notReturnedPct, color: pctToColor(v.notReturnedPct)
@@ -1870,6 +1891,13 @@
       if (v === true) return true;
       const s = String(v || '').trim().toUpperCase();
       return s === 'TRUE' || s === 'YES' || s === 'Y' || s === '1';
+    }
+
+    // Tri-state read: 'yes', 'no', or 'pending' — a genuinely blank cell
+    // means nobody has confirmed either way yet.
+    function getReturnStatus(v) {
+      if (v === '' || v === null || v === undefined) return 'pending';
+      return isReturnedTruthy(v) ? 'yes' : 'no';
     }
 
     function fmtDate(d) {
