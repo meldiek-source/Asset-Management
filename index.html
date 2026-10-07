@@ -148,30 +148,6 @@
     .flag-group-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
     .no-flags { color: var(--good); font-size: 15px; }
 
-    /* Stat pills */
-    .stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
-    .stat-box { flex: 1; min-width: 140px; background: var(--card2); border-radius: 10px; padding: 14px 16px; text-align: center; }
-    .stat-box .num { font-size: 28px; font-weight: 800; color: var(--primary); }
-    .stat-box .lbl { font-size: 13px; color: var(--muted); margin-top: 2px; }
-    .stat-box .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-    .stat-box.green .num { color: var(--good); }
-    .stat-box.red .num { color: var(--danger); }
-    .yn-badge {
-      display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;
-    }
-    .yn-badge.yes { background: rgba(126,231,135,0.15); color: var(--good); border: 1px solid rgba(126,231,135,0.4); }
-    .yn-badge.no { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid rgba(255,107,107,0.4); }
-    .yn-badge.pending { background: rgba(167,169,171,0.15); color: var(--muted); border: 1px solid rgba(167,169,171,0.4); }
-
-    /* Toggle pills for returns Yes/No/Pending */
-    .toggle-pair { display: flex; gap: 6px; margin-top: 6px; }
-    .toggle-btn {
-      flex: 1; text-align: center; padding: 9px; border-radius: 6px; border: 1px solid var(--border);
-      background: var(--card2); color: var(--muted); cursor: pointer; font-size: 14px; font-weight: 600;
-    }
-    .toggle-btn.on-yes.selected { background: var(--good); color: #0e0f0c; border-color: var(--good); }
-    .toggle-btn.on-no.selected { background: var(--danger); color: #0e0f0c; border-color: var(--danger); }
-    .toggle-btn.on-pending.selected { background: var(--muted); color: #0e0f0c; border-color: var(--muted); }
 
     /* Requests tab — distinct color to separate it visually from the rest of the app */
     :root { --req-accent: #FF9F1C; }
@@ -232,7 +208,6 @@
     <div class="tab" data-panel="store">Stores inventory</div>
     <div class="tab" data-panel="rider">Current and New Riders assets</div>
     <div class="tab" data-panel="planning">Planning</div>
-    <div class="tab" data-panel="returns">Terminated riders returns</div>
     <div class="tab" data-panel="requests">Requests</div>
   </div>
 
@@ -488,93 +463,6 @@
     </div>
   </div>
 
-  <!-- RIDER RETURNS -->
-  <div class="panel" id="panel-returns">
-    <div class="card">
-      <h3>Return status overview</h3>
-      <div class="stat-row" id="ret-stats"></div>
-    </div>
-
-    <div class="card-cols">
-      <div class="card">
-        <h3>Returned vs Not Returned</h3>
-        <div id="ret-overall-chart"></div>
-      </div>
-      <div class="card">
-        <h3>% Not Returned by Vendor</h3>
-        <div class="bar-scroll" id="ret-vendor-chart"></div>
-      </div>
-    </div>
-
-    <div class="card" id="ret-form-card">
-      <strong>Record a terminated rider's asset return</strong>
-      <div class="row">
-        <div>
-          <label>Rider ID</label>
-          <input type="text" id="ret-id" placeholder="e.g. DA-1042" onblur="lookupReturn()">
-        </div>
-        <div>
-          <label>Rider Name</label>
-          <input type="text" id="ret-name" placeholder="Full name">
-        </div>
-        <div>
-          <label>Store</label>
-          <select id="ret-store"></select>
-        </div>
-        <div>
-          <label>Vendor</label>
-          <select id="ret-vendor"></select>
-        </div>
-      </div>
-      <div class="row" id="ret-toggle-grid" style="margin-top:6px;"></div>
-      <button onclick="submitReturn()">Save Return Record</button>
-      <div class="status" id="ret-status"></div>
-    </div>
-
-    <div class="card">
-      <strong>Bulk upload terminated rider returns</strong>
-      <div class="muted">Download the template, fill it in, then upload it back. Column order: Rider ID, Rider Name, Store, Vendor, Helmet Returned (Yes/No), Box Returned (Yes/No). Leave a cell blank to mark it Pending instead. Existing Rider IDs are updated; new ones are created. Each upload is dated today.</div>
-      <div class="row" style="margin-top:10px; align-items:flex-end;">
-        <div style="flex:0;"><button class="secondary" onclick="downloadReturnsTemplate()">Download Excel template</button></div>
-        <div>
-          <label>Upload filled template (.xlsx)</label>
-          <input type="file" id="ret-bulk-file" accept=".xlsx,.xls" onchange="handleReturnsFileUpload(this)">
-        </div>
-      </div>
-      <div class="status" id="ret-bulk-status"></div>
-    </div>
-
-    <div class="card">
-      <div class="row" style="align-items:center;">
-        <div><strong>All Return Records</strong></div>
-        <div style="flex:1; min-width:160px;">
-          <label>Filter by store</label>
-          <select id="ret-store-filter" onchange="renderReturnsTable()">
-            <option value="All">All</option>
-          </select>
-        </div>
-        <div style="flex:1; min-width:160px;">
-          <label>Filter by vendor</label>
-          <select id="ret-vendor-filter" onchange="renderReturnsTable()">
-            <option value="All">All</option>
-          </select>
-        </div>
-        <div style="flex:1; min-width:140px;">
-          <label>Filter by status</label>
-          <select id="ret-status-filter" onchange="renderReturnsTable()">
-            <option value="All">All</option>
-            <option value="Pending">Pending only</option>
-          </select>
-        </div>
-        <div style="flex:1; min-width:200px;">
-          <label>Search rider name or ID</label>
-          <input type="text" id="ret-search" placeholder="e.g. DA-2201 or Karim" oninput="renderReturnsTable()">
-        </div>
-      </div>
-      <table id="ret-table"><thead><tr id="ret-table-head"></tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-
   <!-- REQUESTS (Team Leader → what a store needs) -->
   <div class="panel" id="panel-requests">
     <div class="card">
@@ -649,7 +537,6 @@
     let CONFIG = null;
     let dispatchPlanRows = []; // {store, category, qty}
     let lastConfirmedPlan = null; // holds plan rows pending confirmation
-    let returnToggles = {}; // { Helmet: 'yes'/'no'/'pending', 'Delivery box': 'yes'/'no'/'pending' }
     let SESSION_TOKEN = null;
 
     // ---- Browser-side cache (mirrors the server's short-lived cache) ----
@@ -670,7 +557,6 @@
       'getWarehouseStock', 'getWarehouseMovements', 'getWarehousePageBundle',
       'getDarkStoreStock', 'getStoreReductionAlerts',
       'getRiders', 'getRiderById',
-      'getRiderReturns', 'getRiderReturnById', 'getReturnsDashboard', 'getReturnsPageBundle',
       'getAssetRequests'
     ]);
     let CLIENT_CACHE = {};
@@ -895,7 +781,7 @@
     }, 30 * 1000);
 
     // ---- Tabs ----
-    const ALL_TABS = ['dashboard', 'warehouse', 'store', 'rider', 'planning', 'returns', 'requests'];
+    const ALL_TABS = ['dashboard', 'warehouse', 'store', 'rider', 'planning', 'requests'];
 
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -923,7 +809,6 @@
         if (tab.dataset.panel === 'store') loadStoreStock();
         if (tab.dataset.panel === 'rider') loadRiders();
         if (tab.dataset.panel === 'planning') loadInboundWarehouseTable();
-        if (tab.dataset.panel === 'returns') loadReturnsPage();
         if (tab.dataset.panel === 'requests') loadRequestLog();
       });
     });
@@ -1013,10 +898,6 @@
           fillSelect(document.getElementById('in-category'), cfg.warehouseCategories);
           fillSelect(document.getElementById('dash-category'), cfg.warehouseCategories);
           fillSelect(document.getElementById('wh-log-filter'), cfg.warehouseCategories, true);
-          fillSelect(document.getElementById('ret-vendor'), cfg.vendors);
-          fillSelect(document.getElementById('ret-store'), cfg.stores);
-          fillSelect(document.getElementById('ret-vendor-filter'), cfg.vendors, true);
-          fillSelect(document.getElementById('ret-store-filter'), cfg.stores, true);
           fillSelect(document.getElementById('rq-store'), cfg.stores);
           fillSelect(document.getElementById('rq-category'), cfg.warehouseCategories);
           fillSelect(document.getElementById('rq-log-filter'), cfg.stores, true);
@@ -1043,25 +924,6 @@
               <input type="number" min="0" class="ds-asset-input" data-cat="${cat}" placeholder="0" value="0">
             </div>
           `).join('');
-
-          // Return toggle grid (Yes/No/Pending per return category)
-          returnToggles = {};
-          cfg.returnCategories.forEach(cat => returnToggles[cat] = 'pending');
-          const retGrid = document.getElementById('ret-toggle-grid');
-          retGrid.innerHTML = cfg.returnCategories.map(cat => `
-            <div>
-              <label>${cat === 'Delivery box' ? 'Box' : cat} returned?</label>
-              <div class="toggle-pair toggle-trio" data-cat="${cat}">
-                <div class="toggle-btn on-yes" onclick="setReturnToggle('${cat}', 'yes')">Yes</div>
-                <div class="toggle-btn on-no" onclick="setReturnToggle('${cat}', 'no')">No</div>
-                <div class="toggle-btn on-pending selected" onclick="setReturnToggle('${cat}', 'pending')">Pending</div>
-              </div>
-            </div>
-          `).join('');
-
-          document.getElementById('ret-table-head').innerHTML =
-            ['Rider ID','Name','Store','Vendor'].concat(cfg.returnCategories.map(c => (c === 'Delivery box' ? 'Box' : c) + ' Returned')).concat(['Date Recorded', ''])
-              .map(h => `<th>${h}</th>`).join('');
 
           // Only load data for whichever tab will actually be shown first —
           // restoreActiveTab() (below) handles that, instead of eagerly
@@ -1154,24 +1016,6 @@
           </div>
         `;
       }).join('');
-    }
-
-    // Green (0%) -> amber (50%) -> red (100%) gradient, used for "% not
-    // returned" style metrics where a higher number is worse.
-    function pctToColor(pct) {
-      const stops = [
-        { p: 0, c: [126, 231, 135] },   // --good
-        { p: 50, c: [255, 159, 28] },   // --req-accent amber
-        { p: 100, c: [255, 107, 107] }  // --danger
-      ];
-      let lo = stops[0], hi = stops[stops.length - 1];
-      for (let i = 0; i < stops.length - 1; i++) {
-        if (pct >= stops[i].p && pct <= stops[i + 1].p) { lo = stops[i]; hi = stops[i + 1]; break; }
-      }
-      const range = (hi.p - lo.p) || 1;
-      const t = (pct - lo.p) / range;
-      const rgb = lo.c.map((v, i) => Math.round(v + (hi.c[i] - v) * t));
-      return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
     }
 
     // Same idea, but only two colors: yellow (full stock) fading straight
@@ -1646,258 +1490,14 @@
         .catch(err => { status.textContent = err.message; status.className = 'status err'; });
     }
 
-    // ---- Rider Returns ----
-    function setReturnToggle(cat, value) {
-      returnToggles[cat] = value;
-      const pair = document.querySelector(`.toggle-pair[data-cat="${cat}"]`);
-      pair.querySelector('.on-yes').classList.toggle('selected', value === 'yes');
-      pair.querySelector('.on-no').classList.toggle('selected', value === 'no');
-      pair.querySelector('.on-pending').classList.toggle('selected', value === 'pending');
-    }
-
-    function lookupReturn() {
-      const id = document.getElementById('ret-id').value.trim();
-      if (!id) return;
-      callApi('getRiderReturnById', [id])
-        .then(rec => {
-          if (!rec) return;
-          document.getElementById('ret-name').value = rec.RiderName || '';
-          document.getElementById('ret-store').value = rec.Store || '';
-          document.getElementById('ret-vendor').value = rec.Vendor || '';
-          CONFIG.returnCategories.forEach(cat => {
-            setReturnToggle(cat, getReturnStatus(rec[cat + 'Returned']));
-          });
-        })
-        .catch(err => showGlobalError('return lookup (getRiderReturnById)', err));
-    }
-
-    function submitReturn() {
-      const id = document.getElementById('ret-id').value.trim();
-      const name = document.getElementById('ret-name').value.trim();
-      const store = document.getElementById('ret-store').value;
-      const vendor = document.getElementById('ret-vendor').value;
-      const status = document.getElementById('ret-status');
-      if (!id || !name) {
-        status.textContent = 'Rider ID and Name are required.';
-        status.className = 'status err';
-        return;
-      }
-      status.textContent = 'Saving...'; status.className = 'status';
-      callApi('saveRiderReturn', [id, name, store, vendor, returnToggles])
-        .then(() => {
-          status.textContent = 'Saved.';
-          status.className = 'status ok';
-          loadReturns();
-          loadReturnsDashboard();
-        })
-        .catch(err => { status.textContent = err.message; status.className = 'status err'; });
-    }
-
-    let RETURN_ROWS = []; // cache of last-loaded records, used by the Update Status button
-
-    function populateReturnsRecords(rows) {
-      RETURN_ROWS = rows;
-      renderReturnsTable();
-    }
-
-    function loadReturns() {
-      document.querySelector('#ret-table tbody').innerHTML =
-        loadingBarRowHtml(4 + CONFIG.returnCategories.length + 2);
-      callApi('getRiderReturns', [])
-        .then(rows => populateReturnsRecords(rows))
-        .catch(err => showGlobalError('return records (getRiderReturns)', err));
-    }
-
-    // Return records sometimes have extra text appended to the store name
-    // (e.g. "Nasr City - 9th District - CAIDS13"), so an exact match
-    // against the dropdown's plain "Nasr City - 9th District" would miss
-    // them. Match case-insensitively as long as the record's store starts
-    // with (or contains) the selected store name.
+    // Matches store names forgivingly (case-insensitive, starts-with or
+    // contains) — records sometimes carry extra text after the store name,
+    // so an exact match against the dropdown value would miss them.
     function storeMatches(recordStore, filterStore) {
       const a = String(recordStore || '').trim().toLowerCase();
       const b = String(filterStore || '').trim().toLowerCase();
       if (!a || !b) return false;
       return a.startsWith(b) || a.includes(b);
-    }
-
-    function renderReturnsTable() {
-      const storeFilter = document.getElementById('ret-store-filter').value;
-      const vendorFilter = document.getElementById('ret-vendor-filter').value;
-      const statusFilter = document.getElementById('ret-status-filter').value;
-      const searchText = document.getElementById('ret-search').value.trim().toLowerCase();
-
-      let rows = RETURN_ROWS;
-      if (storeFilter !== 'All') rows = rows.filter(r => storeMatches(r.Store, storeFilter));
-      if (vendorFilter !== 'All') rows = rows.filter(r => (r.Vendor || 'Unspecified/Blank') === vendorFilter);
-      if (statusFilter === 'Pending') {
-        // "Pending" = at least one of this rider's categories is still unconfirmed.
-        rows = rows.filter(r => CONFIG.returnCategories.some(c => getReturnStatus(r[c + 'Returned']) === 'pending'));
-      }
-      if (searchText) {
-        rows = rows.filter(r =>
-          String(r.RiderID || '').toLowerCase().includes(searchText) ||
-          String(r.RiderName || '').toLowerCase().includes(searchText)
-        );
-      }
-
-      const tbody = document.querySelector('#ret-table tbody');
-      if (rows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${3 + CONFIG.returnCategories.length + 2}" class="muted">No matching records.</td></tr>`;
-        return;
-      }
-      tbody.innerHTML = rows.map(r => {
-        const cats = CONFIG.returnCategories.map(c => {
-          const status = getReturnStatus(r[c + 'Returned']);
-          const label = status === 'yes' ? 'Yes' : status === 'no' ? 'No' : 'Pending';
-          return `<td><span class="yn-badge ${status}">${label}</span></td>`;
-        }).join('');
-        const safeId = String(r.RiderID).replace(/'/g,"\\'");
-        return `<tr><td>${r.RiderID}</td><td>${r.RiderName}</td><td>${r.Store || ''}</td><td>${r.Vendor || ''}</td>${cats}<td>${fmtDate(r.DateRecorded)}</td>
-          <td style="white-space:nowrap;">
-            <button class="secondary btn-sm" onclick="editReturnRecord('${safeId}')">Update Status</button>
-            <button class="danger btn-sm" onclick="deleteReturnRecord('${safeId}')">Delete</button>
-          </td></tr>`;
-      }).join('');
-    }
-
-    function deleteReturnRecord(riderId) {
-      if (!confirm('Delete the return record for ' + riderId + '? This cannot be undone.')) return;
-      const status = document.getElementById('ret-status');
-      callApi('deleteRiderReturn', [riderId])
-        .then(() => {
-          status.textContent = 'Deleted ' + riderId + '.';
-          status.className = 'status ok';
-          loadReturns();
-        })
-        .catch(err => { status.textContent = err.message; status.className = 'status err'; });
-    }
-
-    function downloadReturnsTemplate() {
-      if (!CONFIG) { alert('Please wait for the app to finish loading, then try again.'); return; }
-      const headers = ['RiderID', 'RiderName', 'Store', 'Vendor'].concat(CONFIG.returnCategories.map(c => (c === 'Delivery box' ? 'Box' : c) + 'Returned'));
-      const exampleRow = ['DA-2201', 'Karim Fathy', CONFIG.stores[0], CONFIG.vendors[0]].concat(CONFIG.returnCategories.map(() => ''));
-      const ws = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Returns');
-      XLSX.writeFile(wb, 'terminated_riders_returns_template.xlsx');
-    }
-
-    function handleReturnsFileUpload(input) {
-      const file = input.files[0];
-      if (!file) return;
-      const status = document.getElementById('ret-bulk-status');
-      status.textContent = 'Reading file...'; status.className = 'status';
-      const reader = new FileReader();
-      reader.onload = e => {
-        try {
-          const wb = XLSX.read(e.target.result, { type: 'array' });
-          const sheet = wb.Sheets[wb.SheetNames[0]];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-          if (rows.length && String(rows[0][0]).trim().toLowerCase() === 'riderid') rows.shift();
-          const parsed = rows.map(r => {
-            const [riderId, riderName, store, vendor, ...flags] = r;
-            const returns = {};
-            CONFIG.returnCategories.forEach((cat, i) => {
-              const raw = String(flags[i] || '').trim();
-              returns[cat] = !raw ? 'pending' : (/^y(es)?$/i.test(raw) ? 'yes' : 'no');
-            });
-            return {
-              riderId: String(riderId || '').trim(), riderName: String(riderName || '').trim(),
-              store: String(store || '').trim(), vendor: String(vendor || '').trim(), returns
-            };
-          }).filter(r => r.riderId && r.riderName);
-          if (parsed.length === 0) { status.textContent = 'No valid rows found in the file.'; status.className = 'status err'; return; }
-          status.textContent = 'Uploading ' + parsed.length + ' row(s)...'; status.className = 'status';
-          callApi('bulkSaveReturns', [parsed])
-            .then(res => {
-              status.textContent = `Uploaded. ${res.saved} saved${res.errors.length ? ', ' + res.errors.length + ' error(s): ' + res.errors.join('; ') : ''}.`;
-              status.className = res.errors.length ? 'status err' : 'status ok';
-              input.value = '';
-              loadReturns();
-              loadReturnsDashboard();
-            })
-            .catch(err => { status.textContent = err.message; status.className = 'status err'; });
-        } catch (err) {
-          status.textContent = 'Could not read that file: ' + err.message; status.className = 'status err';
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    function editReturnRecord(riderId) {
-      const rec = RETURN_ROWS.find(r => String(r.RiderID) === String(riderId));
-      if (!rec) return;
-      document.getElementById('ret-id').value = rec.RiderID;
-      document.getElementById('ret-name').value = rec.RiderName || '';
-      document.getElementById('ret-store').value = rec.Store || '';
-      document.getElementById('ret-vendor').value = rec.Vendor || '';
-      CONFIG.returnCategories.forEach(cat => {
-        setReturnToggle(cat, getReturnStatus(rec[cat + 'Returned']));
-      });
-      document.getElementById('ret-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      const status = document.getElementById('ret-status');
-      status.textContent = 'Editing ' + rec.RiderID + ' — change the Yes/No toggles below, then click Save Return Record.';
-      status.className = 'status';
-    }
-
-    function renderReturnsDashboardStats(rep) {
-      const notReturnedPct = (rep.notReturnedPct !== undefined) ? rep.notReturnedPct : (100 - rep.returnedPct);
-      const pendingCount = rep.pendingCount || 0;
-      document.getElementById('ret-stats').innerHTML = `
-        <div class="stat-box"><div class="num">${rep.riderCount}</div><div class="lbl">Terminated riders logged</div></div>
-        <div class="stat-box green"><div class="num">${rep.returnedPct}%</div><div class="lbl">Assets Returned</div><div class="sub">${rep.returnedCount} units</div></div>
-        <div class="stat-box red"><div class="num">${notReturnedPct}%</div><div class="lbl">Assets Not Returned</div><div class="sub">${rep.notReturnedCount} units</div></div>
-        <div class="stat-box"><div class="num">${pendingCount}</div><div class="lbl">Pending update</div><div class="sub">not yet confirmed either way</div></div>
-      `;
-      renderBars('ret-overall-chart', [
-        { label: 'Returned', value: rep.returnedCount, color: '#7ee787' },
-        { label: 'Not Returned', value: rep.notReturnedCount, color: '#ff6b6b' },
-        { label: 'Pending', value: pendingCount, color: '#a7a9ab' }
-      ]);
-      renderBars('ret-vendor-chart', rep.byVendor.map(v => ({
-        label: v.vendor, value: v.notReturnedPct, color: pctToColor(v.notReturnedPct)
-      })), { maxVal: 100 });
-    }
-
-    function loadReturnsDashboard() {
-      document.getElementById('ret-stats').innerHTML = loadingBarHtml();
-      showLoading('ret-overall-chart');
-      showLoading('ret-vendor-chart');
-      callApi('getReturnsDashboard', [])
-        .then(rep => renderReturnsDashboardStats(rep))
-        .catch(err => showGlobalError('returns dashboard (getReturnsDashboard)', err));
-    }
-
-    // Used when the Terminated riders returns tab is actually opened — one
-    // round trip for both the dashboard stats and the records table.
-    function loadReturnsPage() {
-      document.getElementById('ret-stats').innerHTML = loadingBarHtml();
-      showLoading('ret-overall-chart');
-      showLoading('ret-vendor-chart');
-      document.querySelector('#ret-table tbody').innerHTML =
-        loadingBarRowHtml(4 + CONFIG.returnCategories.length + 2);
-      callApi('getReturnsPageBundle', [])
-        .then(bundle => {
-          renderReturnsDashboardStats(bundle.dashboard);
-          populateReturnsRecords(bundle.records);
-        })
-        .catch(err => showGlobalError('returns page (getReturnsPageBundle)', err));
-    }
-
-    // Accepts a "returned" value however it was entered — a real boolean
-    // (written by the app itself), or free text typed directly into the
-    // sheet like "Yes", "yes", "Y", "TRUE", "1".
-    function isReturnedTruthy(v) {
-      if (v === true) return true;
-      const s = String(v || '').trim().toUpperCase();
-      return s === 'TRUE' || s === 'YES' || s === 'Y' || s === '1';
-    }
-
-    // Tri-state read: 'yes', 'no', or 'pending' — a genuinely blank cell
-    // means nobody has confirmed either way yet.
-    function getReturnStatus(v) {
-      if (v === '' || v === null || v === undefined) return 'pending';
-      return isReturnedTruthy(v) ? 'yes' : 'no';
     }
 
     function fmtDate(d) {
